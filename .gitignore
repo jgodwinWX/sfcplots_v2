@@ -1,0 +1,6 @@
+*.log
+metar_file.txt
+validtime.txt
+sfc_obs.sh
+shapefiles/
+old/
