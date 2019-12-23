@@ -1,6 +1,7 @@
 # sfcplots_v2
 
-Description: This program creates some basic surface station plots using MetPy.
+Description: This program creates some basic surface station plots using MetPy. This is largely
+based on the example at https://unidata.github.io/MetPy/latest/examples/plots/Station_Plot.html.
 
 Packages required:
 -MetPy (pip install metpy)
