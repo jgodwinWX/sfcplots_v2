@@ -7,6 +7,7 @@
     Version History:
     1.0 - Designed for use in Python 2.7.
     2.0 - Designed for use in Python 3. (release: 2019/12/23)
+        2.1 - Updated to include station elevation. Minor bug fixes.
 '''
 import csv
 import datetime
@@ -42,7 +43,7 @@ def main():
     # working directory
     directory = '/home/jgodwin/python/sfc_observations'
     # path to station lat/lon information file
-    stationfile = '/home/jgodwin/python/sfc_observations/station_locations.csv'
+    stationfile = '/home/jgodwin/python/sfc_observations/metar_locs.csv'
 
     ### END OF USER SETTINGS BLOCK ###
 
@@ -63,14 +64,15 @@ def main():
     # look up lat and lons for station sites
     with open(stationfile,mode="r") as infile:
         reader = csv.reader(infile)
-        station_dict = dict((row[0],[row[1],row[2]]) for row in reader)
+        station_dict = dict((row[0],[row[1],row[2],row[3]]) for row in reader)
 
     # get individual fields from file
-    f = open("%s/metar_file.txt" % directory,"r")
+    f = open("%s/metar_file.txt" % directory,"r",encoding='ISO-8859-1')
     validtimes = []
     stations = {}
     lats = {}
     lons = {}
+    elev = {}
     slp = {}
     temp = {}
     sky = {}
@@ -93,6 +95,7 @@ def main():
             try:
                 lats[site] = round(float(station_dict[site][0]),3) # station latitude (decimal degrees)
                 lons[site] = round(float(station_dict[site][1]),3) # station longitude (decimal degrees)
+                elev[site] = round(float(station_dict[site][2]),3) # station elevation (meters)
                 try:
                     obs = Metar.Metar(line)                 # decode the METAR
                 except:
@@ -139,16 +142,17 @@ def main():
             except KeyError:
                 lats[site] = float('NaN')
                 lons[site] = float('NaN')
+                elev[site] = float('NaN')
                 continue
 
     lasttime = validtimes[-1]
 
     # rearrange data into format to be used by MetPy
     metpy_file = open("%s/surface_observations.txt" % directory,"w")
-    metpy_file.write('siteID,lat,lon,slp,temp,sky,dpt,wx,wdr,wsp\n')
+    metpy_file.write('siteID,lat,lon,elev,slp,temp,sky,dpt,wx,wdr,wsp\n')
     for key in slp:
-        metpy_file.write("{0},{1},{2},{3},{4},{5},{6},{7},{8},{9}\n".format(stations[key],lats[key],lons[key],\
-            slp[key],temp[key],sky[key],dewpt[key],wx[key],vdir[key],vspd[key]))
+        metpy_file.write("{0},{1},{2},{3},{4},{5},{6},{7},{8},{9},{10}\n".format(stations[key],lats[key],lons[key],\
+            elev[key],slp[key],temp[key],sky[key],dewpt[key],wx[key],vdir[key],vspd[key]))
     metpy_file.close()
 
     time_file = open('%s/validtime.txt' % directory,'w')

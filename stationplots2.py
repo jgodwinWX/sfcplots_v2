@@ -71,7 +71,7 @@ def main():
     ### END OF USER SETTING SECTION ###
 
     # if there are any missing weather codes, add them here
-    wx_code_map.update({'-RADZ':59,'-TS':17})
+    wx_code_map.update({'-RADZ':59,'-TS':17,'VCTSSH':80,'-SGSN':77,'SHUP':76,'FZBR':48,'FZUP':76})
 
     ### READ IN DATA / SETUP MAP ###
     # read in the valid time file
@@ -81,21 +81,22 @@ def main():
         if test and i != testnum:
             continue
         with open(datafile) as f:
-            data = pd.read_csv(f,header=0,names=['siteID','lat','lon','slp','temp','sky','dpt','wx','wdr',\
+            data = pd.read_csv(f,header=0,names=['siteID','lat','lon','elev','slp','temp','sky','dpt','wx','wdr',\
                 'wsp'],na_values=-99999)
             # drop rows with missing winds
             data = data.dropna(how='any',subset=['wdr','wsp'])
+
+        # remove data not within our domain
+        
+        data = data[(data['lat'] >= south[i]-2.0) & (data['lat'] <= north[i]+2.0) \
+            & (data['lon'] >= west[i]-2.0) & (data['lon'] <= east[i]+2.0)]
 
         print("Working on %s" % maps[i])
         # set up the map projection
         proj = ccrs.LambertConformal(central_longitude=-95,central_latitude=35,standard_parallels=[35])
         point_locs = proj.transform_points(ccrs.PlateCarree(),data['lon'].values,data['lat'].values)
-        try:
-            data = data[reduce_point_density(point_locs,radius[i]*1000)]
-        except ValueError:
-            data = data[::2]
-            point_locs = proj.transform_points(ccrs.PlateCarree(),data['lon'].values,data['lat'].values)
-            data = data[reduce_point_density(point_locs,radius[i]*1000)]
+        data = data[reduce_point_density(point_locs,radius[i]*1000)]
+        print(data)
         # state borders
         state_boundaries = cfeature.NaturalEarthFeature(category='cultural',\
             name='admin_1_states_provinces_lines',scale='50m',facecolor='none')
