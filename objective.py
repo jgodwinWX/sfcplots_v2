@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 
 from matplotlib.colors import BoundaryNorm
-from metpy.calc import wind_components,divergence
+from metpy.calc import wind_components,divergence,equivalent_potential_temperature
 from metpy.cbook import get_test_data
 from metpy.interpolate import interpolate_to_grid, remove_nan_observations
 from metpy.plots import add_metpy_logo
@@ -71,7 +71,7 @@ def main():
     savenames = ['conus','texas']
 
     # TEST MODE SETTINGS
-    test = False
+    test = True
     testnum = 1
 
     ### END OF USER SETTINGS BLOCK ###
@@ -120,27 +120,6 @@ def main():
         _, _, vwind = interpolate_to_grid(x_masked, y_masked, np.array(v), interp_type='cressman',
                                           search_radius=400000, hres=100000)
 
-        '''
-        # compute the mixing ratio (multiply by 1,000 for g/kg), then interpolate
-        mixrat = mixingRatio(data['dpt'],data['slp'],data['elev'])*1000.0
-        # compute the specific humidity
-        spchum = mixrat / (1.0 + mixrat)
-        # compute the moisture flux convergence
-        uwind_ms = knotsToMS(uwind)
-        vwind_ms = knotsToMS(vwind)
-        print(np.shape(uwind_ms))
-        print(np.shape(vwind_ms))
-        print(np.shape(windgridx))
-        print(np.shape(windgridy))
-        mfc = -spchum * divergence(uwind_ms*units('m/s'),vwind_ms*units('m/s'))
-
-        # apply the usual filtering and perform the Cressman interpolation
-        x_masked,y_masked,q = remove_nan_observations(xp,yp,mfc)
-        qx,qy,mcon = interpolate_to_grid(x_masked,y_masked,mfc,interp_type='cressman',\
-            minimum_neighbors=3,search_radius=200000,hres=18000)
-        mrat = np.ma.masked_where(np.isnan(mcon),mcon)
-        print(np.nanmin(mcon),np.nanmax(mcon))
-        '''
         # get temperature information
         data['temp'] = cToF(data['temp'])
         x_masked, y_masked, t = remove_nan_observations(xp, yp, data['temp'].values)
@@ -161,23 +140,33 @@ def main():
             minimum_neighbors=3,search_radius=200000,hres=18000)
         speed = np.ma.masked_where(np.isnan(speed),speed)
 
+        # derived values
+        # station pressure
+        data['pres'] = stationPressure(data['slp'],data['elev'])
+        # theta-E
+        data['thetae'] = equivalent_potential_temperature(data['pres'].values*units.hPa,data['temp'].values*units.degF,data['dpt'].values*units.degF)
+        x_masked,y_masked,thetae = remove_nan_observations(xp,yp,data['thetae'].values)
+        thex,they,thte = interpolate_to_grid(x_masked,y_masked,thetae,interp_type='cressman',\
+            minimum_neighbors=3,search_radius=200000,hres=18000)
+        thte = np.ma.masked_where(np.isnan(thte),thte)
+
         # set up the state borders
         state_boundaries = cfeature.NaturalEarthFeature(category='cultural',\
             name='admin_1_states_provinces_lines',scale='50m',facecolor='none')
 
         # SCALAR VARIABLES TO PLOT
         # variable names (will appear in plot title)
-        variables = ['Temperature','Dewpoint','Wind Speed']#,'Moisture Convergence']
+        variables = ['Temperature','Dewpoint','Wind Speed','Theta-E']
         # units (for colorbar label)
-        unitlabels = ['F','F','kt']#,'1/s']
+        unitlabels = ['F','F','kt','K']
         # list of actual variables to plot
-        vardata = [temp,dewp,speed]#,mcon]
+        vardata = [temp,dewp,speed,thte]
         # tag in output filename
-        varplots = ['temp','dewp','wspd']#,'mcon']
+        varplots = ['temp','dewp','wspd','thte']
         # levels: (lower,upper,step)
-        levs = [[-20,105,5],[30,85,5],[0,70,5]]#,[0,21,2]]
+        levs = [[-20,105,5],[30,85,5],[0,70,5],[250,380,5]]
         # colormaps
-        colormaps = ['hsv_r','Greens','plasma']#,'Greens']
+        colormaps = ['hsv_r','Greens','plasma','hsv_r']
 
         for j in range(len(variables)):
             print("\t%s" % variables[j])
