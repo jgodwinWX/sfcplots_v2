@@ -126,8 +126,10 @@ def main():
             & (data['lon'] >= west[i]) & (data['lon'] <= east[i])]
         min_temp = searchdata.loc[searchdata['temp'].idxmin()]
         max_temp = searchdata.loc[searchdata['temp'].idxmax()]
-        text_str = "Max temp: %.0f F at %s\nMin temp: %.0f F at %s"\
-             % (min_temp['temp'],min_temp['siteID'],max_temp['temp'],max_temp['siteID'])
+        max_dewp = searchdata.loc[searchdata['dpt'].idxmax()]
+        text_str = "Max temp: %.0f F at %s\nMin temp: %.0f F at %s\nMax dewpoint: %.0f F at %s"\
+             % (min_temp['temp'],min_temp['siteID'],max_temp['temp'],max_temp['siteID'],\
+                max_dewp['dpt'],max_dewp['siteID'])
 
         ### PLOTTING SECTION ###
         # change the DPI to increase the resolution
@@ -168,11 +170,13 @@ def main():
         plt.title('Surface Observations valid %s' % vt)
         # plot the min/max temperature info and draw circle around warmest and coldest obs
         props = dict(boxstyle='round',facecolor='wheat',alpha=0.5)
-        plt.text(west[i]+0.3,south[i]+0.3,text_str,fontsize=12,verticalalignment='top',bbox=props,transform=ccrs.Geodetic())
+        plt.text(west[i],south[i],text_str,fontsize=12,verticalalignment='top',bbox=props,transform=ccrs.Geodetic())
         projx1,projy1 = proj.transform_point(min_temp['lon'],min_temp['lat'],ccrs.Geodetic())
-        ax.add_patch(matplotlib.patches.Circle(xy=[projx1,projy1],radius=50000,facecolor="None",edgecolor='blue',transform=proj))
+        ax.add_patch(matplotlib.patches.Circle(xy=[projx1,projy1],radius=50000,facecolor="None",edgecolor='blue',linewidth=3,transform=proj))
         projx2,projy2 = proj.transform_point(max_temp['lon'],max_temp['lat'],ccrs.Geodetic())
-        ax.add_patch(matplotlib.patches.Circle(xy=[projx2,projy2],radius=50000,facecolor="None",edgecolor='red',transform=proj))
+        ax.add_patch(matplotlib.patches.Circle(xy=[projx2,projy2],radius=50000,facecolor="None",edgecolor='red',linewidth=3,transform=proj))
+        projx3,projy3 = proj.transform_point(max_dewp['lon'],max_dewp['lat'],ccrs.Geodetic())
+        ax.add_patch(matplotlib.patches.Circle(xy=[projx3,projy3],radius=30000,facecolor="None",edgecolor='green',linewidth=3,transform=proj))
         # save the figure
         outfile_name = savedir + savenames[i]
         plt.savefig(outfile_name,bbox_inches='tight')
