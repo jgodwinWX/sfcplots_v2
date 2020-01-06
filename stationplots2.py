@@ -91,12 +91,14 @@ def main():
         data = data[(data['lat'] >= south[i]-2.0) & (data['lat'] <= north[i]+2.0) \
             & (data['lon'] >= west[i]-2.0) & (data['lon'] <= east[i]+2.0)]
 
+        # filter data (there seems to be one site always reporting a really anomalous temperature
+        data = data[data['temp'] <= 50]
+
         print("Working on %s" % maps[i])
         # set up the map projection
         proj = ccrs.LambertConformal(central_longitude=-95,central_latitude=35,standard_parallels=[35])
         point_locs = proj.transform_points(ccrs.PlateCarree(),data['lon'].values,data['lat'].values)
         data = data[reduce_point_density(point_locs,radius[i]*1000)]
-        print(data)
         # state borders
         state_boundaries = cfeature.NaturalEarthFeature(category='cultural',\
             name='admin_1_states_provinces_lines',scale='50m',facecolor='none')
@@ -118,6 +120,14 @@ def main():
         # map weather strings to WMO codes (only use first symbol if multiple are present
         data['wx'] = data.wx.str.split('/').str[0] + ''
         wx = [wx_code_map[s.split()[0] if ' ' in s else s] for s in data['wx'].fillna('')]
+
+        # get the minimum and maximum temperatures in domain
+        searchdata = data[(data['lat'] >= south[i]) & (data['lat'] <= north[i]) \
+            & (data['lon'] >= west[i]) & (data['lon'] <= east[i])]
+        min_temp = searchdata.loc[searchdata['temp'].idxmin()]
+        max_temp = searchdata.loc[searchdata['temp'].idxmax()]
+        text_str = "Max temp: %.0f F at %s\nMin temp: %.0f F at %s"\
+             % (min_temp['temp'],min_temp['siteID'],max_temp['temp'],max_temp['siteID'])
 
         ### PLOTTING SECTION ###
         # change the DPI to increase the resolution
@@ -156,6 +166,13 @@ def main():
         stationplot.plot_text((2,0),data['siteID'])
         # plot the valid time
         plt.title('Surface Observations valid %s' % vt)
+        # plot the min/max temperature info and draw circle around warmest and coldest obs
+        props = dict(boxstyle='round',facecolor='wheat',alpha=0.5)
+        plt.text(west[i]+0.3,south[i]+0.3,text_str,fontsize=12,verticalalignment='top',bbox=props,transform=ccrs.Geodetic())
+        projx1,projy1 = proj.transform_point(min_temp['lon'],min_temp['lat'],ccrs.Geodetic())
+        ax.add_patch(matplotlib.patches.Circle(xy=[projx1,projy1],radius=50000,facecolor="None",edgecolor='blue',transform=proj))
+        projx2,projy2 = proj.transform_point(max_temp['lon'],max_temp['lat'],ccrs.Geodetic())
+        ax.add_patch(matplotlib.patches.Circle(xy=[projx2,projy2],radius=50000,facecolor="None",edgecolor='red',transform=proj))
         # save the figure
         outfile_name = savedir + savenames[i]
         plt.savefig(outfile_name,bbox_inches='tight')
