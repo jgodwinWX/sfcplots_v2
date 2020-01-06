@@ -4,7 +4,8 @@
 
     Dependencies: Cartopy, matplotlib, numpy, pandas, metpy
 
-    Version History: 1.0 - initial build (released 2019/12/23)
+    Version History: 1.0 - initial build (released 2019/12/23).
+        1.1 - Now plots theta-e and mixing ratio (released 2020/01/06).
 '''
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
@@ -13,7 +14,11 @@ import numpy as np
 import pandas as pd
 
 from matplotlib.colors import BoundaryNorm
+
 from metpy.calc import wind_components,divergence,equivalent_potential_temperature
+from metpy.calc import relative_humidity_from_dewpoint,mixing_ratio_from_relative_humidity
+from metpy.calc import advection
+
 from metpy.cbook import get_test_data
 from metpy.interpolate import interpolate_to_grid, remove_nan_observations
 from metpy.plots import add_metpy_logo
@@ -21,7 +26,7 @@ from metpy.units import units
 
 __author__ = 'Jason Godwin'
 __license__ = 'GPL'
-__version__ = '1.0'
+__version__ = '1.1'
 __maintainer__ = 'Jason Godwin'
 __email__ = 'jasonwgodwin@gmail.com'
 __status__ = 'PRODUCTION'
@@ -57,18 +62,18 @@ def main():
 
     # MAP SETTINGS
     # map names (for tracking purposes)
-    maps = ['CONUS','Texas']
+    maps = ['CONUS','Texas','Floater 1']
     # map boundaries
-    west = [-120,-108]
-    east = [-70,-93]
-    south = [20,25]
-    north = [50,38]
+    west = [-120,-108,-100]
+    east = [-70,-93,-81]
+    south = [20,25,27]
+    north = [50,38,38]
 
     # OUTPUT SETTINGS
     # save directory for output
     savedir = '/var/www/html/images/'
     # filenames ("_[variable].png" will be appended, so only a descriptor like "conus" is needed)
-    savenames = ['conus','texas']
+    savenames = ['conus','texas','floater1']
 
     # TEST MODE SETTINGS
     test = True
@@ -150,23 +155,31 @@ def main():
             minimum_neighbors=3,search_radius=200000,hres=18000)
         thte = np.ma.masked_where(np.isnan(thte),thte)
 
+        # mixing ratio
+        relh = relative_humidity_from_dewpoint(data['temp'].values*units.degF,data['dpt'].values*units.degF)
+        mixr = mixing_ratio_from_relative_humidity(relh,data['temp'].values*units.degF,data['pres'].values*units.hPa) * 1000.0
+        x_masked,y_masked,mixrat = remove_nan_observations(xp,yp,mixr)
+        mrx,mry,mrat = interpolate_to_grid(x_masked,y_masked,mixrat,interp_type='cressman',\
+            minimum_neighbors=3,search_radius=200000,hres=18000)
+        mrat = np.ma.masked_where(np.isnan(mrat),mrat)
+
         # set up the state borders
         state_boundaries = cfeature.NaturalEarthFeature(category='cultural',\
             name='admin_1_states_provinces_lines',scale='50m',facecolor='none')
 
         # SCALAR VARIABLES TO PLOT
         # variable names (will appear in plot title)
-        variables = ['Temperature','Dewpoint','Wind Speed','Theta-E']
+        variables = ['Temperature','Dewpoint','Wind Speed','Theta-E','Mixing Ratio']
         # units (for colorbar label)
-        unitlabels = ['F','F','kt','K']
+        unitlabels = ['F','F','kt','K','g/kg']
         # list of actual variables to plot
-        vardata = [temp,dewp,speed,thte]
+        vardata = [temp,dewp,speed,thte,mrat]
         # tag in output filename
-        varplots = ['temp','dewp','wspd','thte']
+        varplots = ['temp','dewp','wspd','thte','mrat']
         # levels: (lower,upper,step)
-        levs = [[-20,105,5],[30,85,5],[0,70,5],[250,380,5]]
+        levs = [[-20,105,5],[30,85,5],[0,70,5],[250,380,5],[0,22,2]]
         # colormaps
-        colormaps = ['hsv_r','Greens','plasma','hsv_r']
+        colormaps = ['hsv_r','Greens','plasma','hsv_r','Greens']
 
         for j in range(len(variables)):
             print("\t%s" % variables[j])

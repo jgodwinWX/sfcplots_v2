@@ -7,6 +7,8 @@
     Version History:
     1.0 - Designed for use in Python 2.7.
     2.0 - Designed for use in Python 3. MetPy no longer supports Python 2.7! (released: 2019/12/23)
+        2.1 - Displays warmest/coolest temperature and highest dewpoint on each map 
+                (also circles them). Released 2020/01/06.
 '''
 
 import matplotlib
@@ -26,7 +28,7 @@ from metpy.units import units
 
 __author__ = 'Jason Godwin'
 __license__ = 'GPL'
-__version__ = '2.0'
+__version__ = '2.1'
 __maintainer__ = 'Jason Godwin'
 __email__ = 'jasonwgodwin@gmail.com'
 __status__ = 'PRODUCTION'
@@ -47,22 +49,22 @@ def main():
 
     # MAP SETTINGS
     # map names (doesn't go anywhere (yet), just for tracking purposes)
-    maps = ['CONUS','Texas','Great Plains','Southern Rockies']
+    maps = ['CONUS','Texas','Great Plains','Southern Rockies','Floater 1']
     # minimum radius allowed between points (in km)
-    radius = [100.0,50.0,75.0,50.0]
+    radius = [100.0,50.0,75.0,50.0,50.0]
     # map boundaries (longitude/latitude degrees)
-    west = [-122,-108,-105,-112]
-    east = [-73,-93,-90,-102]
-    south = [23,25,30,34]
-    north = [50,38,50,42]
+    west = [-122,-108,-105,-112,-100]
+    east = [-73,-93,-90,-102,-81]
+    south = [23,25,30,34,27]
+    north = [50,38,50,42,38]
     # use county map? (True/False): warning, counties load slow!
-    usecounties = [False,False,False,False]
+    usecounties = [False,False,False,False,False]
 
     # OUTPUT SETTINGS
     # save directory for output
     savedir = '/var/www/html/images/'
     # filenames for output
-    savenames = ['conus.png','texas.png','plains.png','srockies.png']
+    savenames = ['conus.png','texas.png','plains.png','srockies.png','floater1.png']
 
     # TEST MODE SETTINGS
     test = False    # True/False
