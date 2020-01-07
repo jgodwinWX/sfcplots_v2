@@ -103,9 +103,11 @@ def main():
         cenlat = (south[i] + north[i]) / 2.0
         sparallel = cenlat
         if cenlat > 0:
-            cutoff=-30
+            cutoff = -30
+            flip = False
         elif cenlat < 0:
             cutoff=30
+            flip = True
         # create the projection
         proj = ccrs.LambertConformal(central_longitude=cenlon,central_latitude=cenlat,standard_parallels=[sparallel],cutoff=cutoff)
         point_locs = proj.transform_points(ccrs.PlateCarree(),data['lon'].values,data['lat'].values)
@@ -174,7 +176,7 @@ def main():
         # plot the present weather
         stationplot.plot_symbol('W',wx,current_weather)
         # plot the wind barbs
-        stationplot.plot_barb(u,v)
+        stationplot.plot_barb(u,v,flip_barb=flip)
         # plot the text of the station ID
         stationplot.plot_text((2,0),data['siteID'])
         # plot the valid time

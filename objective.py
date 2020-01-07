@@ -5,7 +5,9 @@
     Dependencies: Cartopy, matplotlib, numpy, pandas, metpy
 
     Version History: 1.0 - initial build (released 2019/12/23).
-        1.1 - Now plots theta-e and mixing ratio (released 2020/01/06).
+        1.10 - Now plots theta-e and mixing ratio (released 2020/01/06).
+        1.11 - Changed projection to Lambert Conformal to be consistent with stationplots2.py.
+                Also added support for flipping the wind barbs in the Southern Hemisphere.
 '''
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
@@ -90,9 +92,11 @@ def main():
         cenlat = (south[i] + north[i]) / 2.0
         sparallel = cenlat
         if cenlat > 0:
-            cutoff=-30
+            cutoff = -30
+            flip = False
         elif cenlat < 0:
-            cutoff=30
+            cutoff = 30
+            flip = True
         to_proj = ccrs.LambertConformal(central_longitude=cenlon,central_latitude=cenlat,standard_parallels=[sparallel],cutoff=cutoff)
         # open the data
         vt = open(timefile).read()
@@ -218,7 +222,7 @@ def main():
                 extend='both',label=labels)
 
             # plot the wind barbs
-            view.barbs(windgridx, windgridy, uwind, vwind, alpha=.4, length=5)
+            view.barbs(windgridx, windgridy, uwind, vwind, alpha=.4, length=5,flip_barb=flip)
 
             # plot title and save
             view.set_title('%s (shaded), SLP, and Wind (valid %s)' % (variables[j],vt))
