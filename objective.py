@@ -62,29 +62,38 @@ def main():
 
     # MAP SETTINGS
     # map names (for tracking purposes)
-    maps = ['CONUS','Texas','Floater 1']
+    maps = ['CONUS','Texas','Floater 1','Floater 2']
     # map boundaries
-    west = [-120,-108,-100]
-    east = [-70,-93,-81]
-    south = [20,25,27]
-    north = [50,38,38]
+    west = [-120,-108,-100,110]
+    east = [-70,-93,-81,160]
+    south = [20,25,27,-45]
+    north = [50,38,38,-10]
 
     # OUTPUT SETTINGS
     # save directory for output
     savedir = '/var/www/html/images/'
     # filenames ("_[variable].png" will be appended, so only a descriptor like "conus" is needed)
-    savenames = ['conus','texas','floater1']
+    savenames = ['conus','texas','floater1','floater2']
 
     # TEST MODE SETTINGS
-    test = True
-    testnum = 1
+    test = False
+    testnum = 3
 
     ### END OF USER SETTINGS BLOCK ###
 
-    # create the map projection
-    to_proj = ccrs.AlbersEqualArea(central_longitude=-97., central_latitude=38.)
     for i in range(len(maps)):
+        if test and i != testnum:
+            continue
         print(maps[i])
+        # create the map projection
+        cenlon = (west[i] + east[i]) / 2.0
+        cenlat = (south[i] + north[i]) / 2.0
+        sparallel = cenlat
+        if cenlat > 0:
+            cutoff=-30
+        elif cenlat < 0:
+            cutoff=30
+        to_proj = ccrs.LambertConformal(central_longitude=cenlon,central_latitude=cenlat,standard_parallels=[sparallel],cutoff=cutoff)
         # open the data
         vt = open(timefile).read()
         with open(datafile) as f:

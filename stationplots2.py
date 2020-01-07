@@ -7,8 +7,9 @@
     Version History:
     1.0 - Designed for use in Python 2.7.
     2.0 - Designed for use in Python 3. MetPy no longer supports Python 2.7! (released: 2019/12/23)
-        2.1 - Displays warmest/coolest temperature and highest dewpoint on each map 
+        2.11 - Displays warmest/coolest temperature and highest dewpoint on each map 
                 (also circles them). Released 2020/01/06.
+        2.12 - Changes to the way the Lambert Conformal Map is setup.
 '''
 
 import matplotlib
@@ -28,7 +29,7 @@ from metpy.units import units
 
 __author__ = 'Jason Godwin'
 __license__ = 'GPL'
-__version__ = '2.1'
+__version__ = '2.12'
 __maintainer__ = 'Jason Godwin'
 __email__ = 'jasonwgodwin@gmail.com'
 __status__ = 'PRODUCTION'
@@ -49,26 +50,26 @@ def main():
 
     # MAP SETTINGS
     # map names (doesn't go anywhere (yet), just for tracking purposes)
-    maps = ['CONUS','Texas','Great Plains','Southern Rockies','Floater 1']
+    maps = ['CONUS','Texas','Great Plains','Southern Rockies','Floater 1','Floater 2']
     # minimum radius allowed between points (in km)
-    radius = [100.0,50.0,75.0,50.0,50.0]
+    radius = [100.0,50.0,75.0,50.0,50.0,50.0]
     # map boundaries (longitude/latitude degrees)
-    west = [-122,-108,-105,-112,-100]
-    east = [-73,-93,-90,-102,-81]
-    south = [23,25,30,34,27]
-    north = [50,38,50,42,38]
+    west = [-122,-108,-105,-112,-100,110]
+    east = [-73,-93,-90,-102,-81,160]
+    south = [23,25,30,34,27,-45]
+    north = [50,38,50,42,38,-10]
     # use county map? (True/False): warning, counties load slow!
-    usecounties = [False,False,False,False,False]
+    usecounties = [False,False,False,False,False,False]
 
     # OUTPUT SETTINGS
     # save directory for output
     savedir = '/var/www/html/images/'
     # filenames for output
-    savenames = ['conus.png','texas.png','plains.png','srockies.png','floater1.png']
+    savenames = ['conus.png','texas.png','plains.png','srockies.png','floater1.png','floater2.png']
 
     # TEST MODE SETTINGS
     test = False    # True/False
-    testnum = 4     # which map are you testing? corresponds to index in "maps" above
+    testnum = 5     # which map are you testing? corresponds to index in "maps" above
 
     ### END OF USER SETTING SECTION ###
 
@@ -97,8 +98,16 @@ def main():
         data = data[data['temp'] <= 50]
 
         print("Working on %s" % maps[i])
-        # set up the map projection
-        proj = ccrs.LambertConformal(central_longitude=-95,central_latitude=35,standard_parallels=[35])
+        # set up the map projection central longitude/latitude and the standard parallels
+        cenlon = (west[i] + east[i]) / 2.0
+        cenlat = (south[i] + north[i]) / 2.0
+        sparallel = cenlat
+        if cenlat > 0:
+            cutoff=-30
+        elif cenlat < 0:
+            cutoff=30
+        # create the projection
+        proj = ccrs.LambertConformal(central_longitude=cenlon,central_latitude=cenlat,standard_parallels=[sparallel],cutoff=cutoff)
         point_locs = proj.transform_points(ccrs.PlateCarree(),data['lon'].values,data['lat'].values)
         data = data[reduce_point_density(point_locs,radius[i]*1000)]
         # state borders
@@ -129,7 +138,7 @@ def main():
         min_temp = searchdata.loc[searchdata['temp'].idxmin()]
         max_temp = searchdata.loc[searchdata['temp'].idxmax()]
         max_dewp = searchdata.loc[searchdata['dpt'].idxmax()]
-        text_str = "Max temp: %.0f F at %s\nMin temp: %.0f F at %s\nMax dewpoint: %.0f F at %s"\
+        text_str = "Min temp: %.0f F at %s\nMax temp: %.0f F at %s\nMax dewpoint: %.0f F at %s"\
              % (min_temp['temp'],min_temp['siteID'],max_temp['temp'],max_temp['siteID'],\
                 max_dewp['dpt'],max_dewp['siteID'])
 
