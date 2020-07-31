@@ -64,18 +64,19 @@ def main():
 
     # MAP SETTINGS
     # map names (for tracking purposes)
-    maps = ['CONUS','Texas','Floater 1','Floater 2']
+    maps = ['CONUS','Texas','Floater 1']
+    restart_domain = [True,False]
     # map boundaries
-    west = [-120,-108,-100,110]
-    east = [-70,-93,-81,160]
-    south = [20,25,27,-45]
-    north = [50,38,38,-10]
+    west = [-120,-108,-85]
+    east = [-70,-93,-70]
+    south = [20,25,15]
+    north = [50,38,35]
 
     # OUTPUT SETTINGS
     # save directory for output
     savedir = '/var/www/html/images/'
     # filenames ("_[variable].png" will be appended, so only a descriptor like "conus" is needed)
-    savenames = ['conus','texas','floater1','floater2']
+    savenames = ['conus','texas','floater1']
 
     # TEST MODE SETTINGS
     test = False
@@ -97,7 +98,8 @@ def main():
         elif cenlat < 0:
             cutoff = 30
             flip = True
-        to_proj = ccrs.LambertConformal(central_longitude=cenlon,central_latitude=cenlat,standard_parallels=[sparallel],cutoff=cutoff)
+        if restart_domain:
+            to_proj = ccrs.LambertConformal(central_longitude=cenlon,central_latitude=cenlat,standard_parallels=[sparallel],cutoff=cutoff)
         # open the data
         vt = open(timefile).read()
         with open(datafile) as f:
@@ -117,64 +119,66 @@ def main():
         xp, yp, _ = to_proj.transform_points(ccrs.Geodetic(), lon, lat).T
 
         # remove missing data from pressure and interpolate
-        print("Performing Cressman interpolation.")
-        x_masked, y_masked, pres = remove_nan_observations(xp, yp, data['slp'].values)
-        slpgridx, slpgridy, slp = interpolate_to_grid(x_masked, y_masked, pres, interp_type='cressman',
-                                                      minimum_neighbors=1, search_radius=400000,
-                                                      hres=100000)
-
-        # get wind information and remove missing data
-        wind_speed = (data['wsp'].values * units('knots'))
-        wind_dir = data['wdr'].values * units.degree
-        good_indices = np.where((~np.isnan(wind_dir)) & (~np.isnan(wind_speed)))
-        x_masked = xp[good_indices]
-        y_masked = yp[good_indices]
-        wind_speed = wind_speed[good_indices]
-        wind_dir = wind_dir[good_indices]
-        u, v = wind_components(wind_speed, wind_dir)
-        windgridx, windgridy, uwind = interpolate_to_grid(x_masked, y_masked, np.array(u),
-                                                          interp_type='cressman', search_radius=400000,
+        # we'll give this a try and see if it can help with my CPU credit problem
+        if restart_domain:
+            print("Performing Cressman interpolation.")
+            x_masked, y_masked, pres = remove_nan_observations(xp, yp, data['slp'].values)
+            slpgridx, slpgridy, slp = interpolate_to_grid(x_masked, y_masked, pres, interp_type='cressman',
+                                                          minimum_neighbors=1, search_radius=400000,
                                                           hres=100000)
-        _, _, vwind = interpolate_to_grid(x_masked, y_masked, np.array(v), interp_type='cressman',
-                                          search_radius=400000, hres=100000)
 
-        # get temperature information
-        data['temp'] = cToF(data['temp'])
-        x_masked, y_masked, t = remove_nan_observations(xp, yp, data['temp'].values)
-        tempx, tempy, temp = interpolate_to_grid(x_masked, y_masked, t, interp_type='cressman',
-                                                 minimum_neighbors=3, search_radius=200000, hres=18000)
-        temp = np.ma.masked_where(np.isnan(temp), temp)
+            # get wind information and remove missing data
+            wind_speed = (data['wsp'].values * units('knots'))
+            wind_dir = data['wdr'].values * units.degree
+            good_indices = np.where((~np.isnan(wind_dir)) & (~np.isnan(wind_speed)))
+            x_masked = xp[good_indices]
+            y_masked = yp[good_indices]
+            wind_speed = wind_speed[good_indices]
+            wind_dir = wind_dir[good_indices]
+            u, v = wind_components(wind_speed, wind_dir)
+            windgridx, windgridy, uwind = interpolate_to_grid(x_masked, y_masked, np.array(u),
+                                                              interp_type='cressman', search_radius=400000,
+                                                              hres=100000)
+            _, _, vwind = interpolate_to_grid(x_masked, y_masked, np.array(v), interp_type='cressman',
+                                              search_radius=400000, hres=100000)
 
-        # get dewpoint information
-        data['dpt'] = cToF(data['dpt'])
-        x_masked,y_masked,td = remove_nan_observations(xp,yp,data['dpt'].values)
-        dptx,dpty,dewp = interpolate_to_grid(x_masked,y_masked,td,interp_type='cressman',\
-            minimum_neighbors=3,search_radius=200000,hres=18000)
-        dewp = np.ma.masked_where(np.isnan(dewp),dewp)
+            # get temperature information
+            data['temp'] = cToF(data['temp'])
+            x_masked, y_masked, t = remove_nan_observations(xp, yp, data['temp'].values)
+            tempx, tempy, temp = interpolate_to_grid(x_masked, y_masked, t, interp_type='cressman',
+                                                     minimum_neighbors=3, search_radius=200000, hres=18000)
+            temp = np.ma.masked_where(np.isnan(temp), temp)
 
-        # interpolate wind speed
-        x_masked,y_masked,wspd = remove_nan_observations(xp,yp,data['wsp'].values)
-        wspx,wspy,speed = interpolate_to_grid(x_masked,y_masked,wspd,interp_type='cressman',\
-            minimum_neighbors=3,search_radius=200000,hres=18000)
-        speed = np.ma.masked_where(np.isnan(speed),speed)
+            # get dewpoint information
+            data['dpt'] = cToF(data['dpt'])
+            x_masked,y_masked,td = remove_nan_observations(xp,yp,data['dpt'].values)
+            dptx,dpty,dewp = interpolate_to_grid(x_masked,y_masked,td,interp_type='cressman',\
+                minimum_neighbors=3,search_radius=200000,hres=18000)
+            dewp = np.ma.masked_where(np.isnan(dewp),dewp)
 
-        # derived values
-        # station pressure
-        data['pres'] = stationPressure(data['slp'],data['elev'])
-        # theta-E
-        data['thetae'] = equivalent_potential_temperature(data['pres'].values*units.hPa,data['temp'].values*units.degF,data['dpt'].values*units.degF)
-        x_masked,y_masked,thetae = remove_nan_observations(xp,yp,data['thetae'].values)
-        thex,they,thte = interpolate_to_grid(x_masked,y_masked,thetae,interp_type='cressman',\
-            minimum_neighbors=3,search_radius=200000,hres=18000)
-        thte = np.ma.masked_where(np.isnan(thte),thte)
+            # interpolate wind speed
+            x_masked,y_masked,wspd = remove_nan_observations(xp,yp,data['wsp'].values)
+            wspx,wspy,speed = interpolate_to_grid(x_masked,y_masked,wspd,interp_type='cressman',\
+                minimum_neighbors=3,search_radius=200000,hres=18000)
+            speed = np.ma.masked_where(np.isnan(speed),speed)
 
-        # mixing ratio
-        relh = relative_humidity_from_dewpoint(data['temp'].values*units.degF,data['dpt'].values*units.degF)
-        mixr = mixing_ratio_from_relative_humidity(relh,data['temp'].values*units.degF,data['pres'].values*units.hPa) * 1000.0
-        x_masked,y_masked,mixrat = remove_nan_observations(xp,yp,mixr)
-        mrx,mry,mrat = interpolate_to_grid(x_masked,y_masked,mixrat,interp_type='cressman',\
-            minimum_neighbors=3,search_radius=200000,hres=18000)
-        mrat = np.ma.masked_where(np.isnan(mrat),mrat)
+            # derived values
+            # station pressure
+            data['pres'] = stationPressure(data['slp'],data['elev'])
+            # theta-E
+            data['thetae'] = equivalent_potential_temperature(data['pres'].values*units.hPa,data['temp'].values*units.degF,data['dpt'].values*units.degF)
+            x_masked,y_masked,thetae = remove_nan_observations(xp,yp,data['thetae'].values)
+            thex,they,thte = interpolate_to_grid(x_masked,y_masked,thetae,interp_type='cressman',\
+                minimum_neighbors=3,search_radius=200000,hres=18000)
+            thte = np.ma.masked_where(np.isnan(thte),thte)
+
+            # mixing ratio
+            relh = relative_humidity_from_dewpoint(data['temp'].values*units.degF,data['dpt'].values*units.degF)
+            mixr = mixing_ratio_from_relative_humidity(relh,data['temp'].values*units.degF,data['pres'].values*units.hPa) * 1000.0
+            x_masked,y_masked,mixrat = remove_nan_observations(xp,yp,mixr)
+            mrx,mry,mrat = interpolate_to_grid(x_masked,y_masked,mixrat,interp_type='cressman',\
+                minimum_neighbors=3,search_radius=200000,hres=18000)
+            mrat = np.ma.masked_where(np.isnan(mrat),mrat)
 
         # set up the state borders
         state_boundaries = cfeature.NaturalEarthFeature(category='cultural',\

@@ -38,6 +38,12 @@ __status__ = 'PRODUCTION'
 def cToF(x):
     return x * (9.0/5.0) + 32.0
 
+def icaoLookup(location,icaodf):
+    try:
+        return icaodf.index[icaodf['ICAO']==location][0]
+    except IndexError:
+        return ''
+
 def main():
     ### START OF USER SETTINGS BLOCK ###
 
@@ -47,25 +53,29 @@ def main():
     timefile = '/home/jgodwin/python/sfc_observations/validtime.txt'
     # file path to county shapefile
     ctyshppath = '/home/jgodwin/python/sfc_observations/shapefiles/counties/countyl010g.shp'
+    # file path to ICAO list
+    icaopath = '/home/jgodwin/python/sfc_observations/icao_list.csv'
+    icaodf = pd.read_csv(icaopath,index_col='STATION')
 
     # MAP SETTINGS
     # map names (doesn't go anywhere (yet), just for tracking purposes)
-    maps = ['CONUS','Texas','Great Plains','Southern Rockies','Floater 1','Floater 2']
+    maps = ['CONUS','Texas','Floater 1']
     # minimum radius allowed between points (in km)
-    radius = [100.0,50.0,75.0,50.0,50.0,50.0]
+    radius = [100.0,50.0,50.0]
     # map boundaries (longitude/latitude degrees)
-    west = [-122,-108,-105,-112,-100,110]
-    east = [-73,-93,-90,-102,-81,160]
-    south = [23,25,30,34,27,-45]
-    north = [50,38,50,42,38,-10]
+    west = [-122,-108,-85]
+    east = [-73,-93,-70]
+    south = [23,25,15]
+    north = [50,38,35]
+    restart_projection = [True,False,False]
     # use county map? (True/False): warning, counties load slow!
-    usecounties = [False,False,False,False,False,False]
+    usecounties = [False,False,False]
 
     # OUTPUT SETTINGS
     # save directory for output
     savedir = '/var/www/html/images/'
     # filenames for output
-    savenames = ['conus.png','texas.png','plains.png','srockies.png','floater1.png','floater2.png']
+    savenames = ['conus.png','texas.png','floater1.png']
 
     # TEST MODE SETTINGS
     test = False    # True/False
@@ -109,8 +119,9 @@ def main():
             cutoff=30
             flip = True
         # create the projection
-        proj = ccrs.LambertConformal(central_longitude=cenlon,central_latitude=cenlat,standard_parallels=[sparallel],cutoff=cutoff)
-        point_locs = proj.transform_points(ccrs.PlateCarree(),data['lon'].values,data['lat'].values)
+        if restart_projection:
+            proj = ccrs.LambertConformal(central_longitude=cenlon,central_latitude=cenlat,standard_parallels=[sparallel],cutoff=cutoff)
+            point_locs = proj.transform_points(ccrs.PlateCarree(),data['lon'].values,data['lat'].values)
         data = data[reduce_point_density(point_locs,radius[i]*1000)]
         # state borders
         state_boundaries = cfeature.NaturalEarthFeature(category='cultural',\
@@ -140,9 +151,15 @@ def main():
         min_temp = searchdata.loc[searchdata['temp'].idxmin()]
         max_temp = searchdata.loc[searchdata['temp'].idxmax()]
         max_dewp = searchdata.loc[searchdata['dpt'].idxmax()]
-        text_str = "Min temp: %.0f F at %s\nMax temp: %.0f F at %s\nMax dewpoint: %.0f F at %s"\
-             % (min_temp['temp'],min_temp['siteID'],max_temp['temp'],max_temp['siteID'],\
-                max_dewp['dpt'],max_dewp['siteID'])
+        
+        # look up the site names for the min/max temp locations
+        min_temp_loc = icaoLookup(min_temp['siteID'],icaodf)
+        max_temp_loc = icaoLookup(max_temp['siteID'],icaodf)
+        max_dewp_loc = icaoLookup(max_dewp['siteID'],icaodf)
+        text_str = "Min temp: %.0f F at %s (%s)\nMax temp: %.0f F at %s (%s)\nMax dewpoint: %.0f F at %s (%s)"\
+             % (min_temp['temp'],min_temp['siteID'],min_temp_loc,\
+                max_temp['temp'],max_temp['siteID'],max_temp_loc,\
+                max_dewp['dpt'],max_dewp['siteID'],max_dewp_loc)
 
         ### PLOTTING SECTION ###
         # change the DPI to increase the resolution
