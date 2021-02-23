@@ -67,10 +67,10 @@ def main():
     maps = ['CONUS','Texas','Floater 1']
     restart_domain = [True,False]
     # map boundaries
-    west = [-120,-108,-85]
-    east = [-70,-93,-70]
-    south = [20,25,15]
-    north = [50,38,35]
+    west = [-120,-108,-108]
+    east = [-70,-93,-85]
+    south = [20,25,37]
+    north = [50,38,52]
 
     # OUTPUT SETTINGS
     # save directory for output

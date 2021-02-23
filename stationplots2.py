@@ -59,15 +59,15 @@ def main():
 
     # MAP SETTINGS
     # map names (doesn't go anywhere (yet), just for tracking purposes)
-    maps = ['CONUS','Texas','Floater 1']
+    maps = ['CONUS','Texas','Tropical Atlantic']
     # minimum radius allowed between points (in km)
-    radius = [100.0,50.0,50.0]
+    radius = [100.0,50.0,75.0]
     # map boundaries (longitude/latitude degrees)
-    west = [-122,-108,-85]
-    east = [-73,-93,-70]
-    south = [23,25,15]
+    west = [-122,-108,-100]
+    east = [-73,-93,-60]
+    south = [23,25,10]
     north = [50,38,35]
-    restart_projection = [True,False,False]
+    restart_projection = [True,False,True]
     # use county map? (True/False): warning, counties load slow!
     usecounties = [False,False,False]
 
@@ -75,7 +75,7 @@ def main():
     # save directory for output
     savedir = '/var/www/html/images/'
     # filenames for output
-    savenames = ['conus.png','texas.png','floater1.png']
+    savenames = ['conus.png','texas.png','atlantic.png']
 
     # TEST MODE SETTINGS
     test = False    # True/False
